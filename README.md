@@ -23,7 +23,8 @@ El proyecto sigue una arquitectura por capas orientada a separación de responsa
 ```text
 across-backend/
 ├── prisma/
-│   └── schema.prisma         # Definición de modelos relacionales y migraciones
+│   ├── migrations/           # Historial inmutable de migraciones SQL aplicadas
+│   └── schema.prisma         # Definición de modelos relacionales y datasource Neon
 ├── src/
 │   ├── config/               # Configuración de entorno y clientes (BD, Prisma)
 │   ├── controllers/          # Manejadores de peticiones HTTP
@@ -33,13 +34,32 @@ across-backend/
 │   ├── types/                # Interfaces y tipos TypeScript
 │   ├── utils/                # Utilidades y formateadores
 │   └── server.ts             # Punto de entrada y levantamiento del servidor Express
+├── docs/
+│   └── REGLAS_DE_NEGOCIO.md  # Especificación oficial del dominio ACROSS
 ├── .env.example              # Plantilla de variables de entorno (SIEMPRE commitear)
 ├── .gitignore                # Archivos y carpetas excluidos del control de versiones
 ├── RULES.md                  # Reglas de desarrollo estrictas para pair-programming
 ├── package.json              # Dependencias y scripts
-├── prisma.config.ts          # Configuración del CLI de Prisma
 └── tsconfig.json             # Configuración del compilador TypeScript
 ```
+
+---
+
+## ☁️ Base de Datos en la Nube: Neon Serverless PostgreSQL
+
+El proyecto utiliza **[Neon](https://neon.tech/)** como motor de base de datos PostgreSQL Serverless, organizado bajo el proyecto `bold-mode-69632863`:
+
+### Entornos Configurados (Branching en Neon):
+1. **Staging (`across-staging`):**
+   - Base de datos aislada para desarrollo activo, pruebas locales y validación de nuevas migraciones.
+   - Endpoint: `ep-steep-water-b45us12d` (Región AWS `us-east-2`).
+2. **Producción (`across-production` / `production`):**
+   - Base de datos principal de producción.
+
+### Arquitectura de Conexión (Pooler vs Conexión Directa):
+Para evitar problemas de saturación de conexiones en arquitecturas Serverless y permitir que Prisma ejecute migraciones sin bloqueos, se utilizan dos URLs complementarias:
+- **`DATABASE_URL` (Connection Pooling):** Utiliza el host `-pooler` (`ep-steep-water-b45us12d-pooler...`). Recomendado para todas las consultas en tiempo de ejecución del servidor Express.
+- **`DIRECT_URL` (Direct Connection):** Conexión directa sin pasar por el pooler de PgBouncer. Utilizada exclusivamente por Prisma para aplicar migraciones (`npx prisma migrate dev`) y gestionar bloqueos de esquema.
 
 ---
 
@@ -47,7 +67,7 @@ across-backend/
 
 ### 1. Prerrequisitos
 - Tener instalado [Node.js](https://nodejs.org/) (v18 o superior).
-- Tener una instancia de [PostgreSQL](https://www.postgresql.org/) en ejecución.
+- Cuenta/acceso a la instancia de **Neon** (o PostgreSQL compatible).
 
 ### 2. Clonar e Instalar Dependencias
 ```bash
@@ -61,18 +81,25 @@ Copia la plantilla `.env.example` y crea tu archivo `.env`:
 ```bash
 cp .env.example .env
 ```
-Edita `.env` con las credenciales de tu PostgreSQL local:
+Edita `.env` con las cadenas de conexión a Neon (ejemplo para **Staging**):
 ```env
 PORT=4000
 NODE_ENV=development
-DATABASE_URL="postgresql://usuario:password@localhost:5432/across_db?schema=public"
+
+# Conexión a Neon PostgreSQL (Staging)
+DATABASE_URL="postgresql://neondb_owner:<PASSWORD>@ep-steep-water-b45us12d-pooler.c-6.us-east-2.aws.neon.tech/across-staging?sslmode=require"
+DIRECT_URL="postgresql://neondb_owner:<PASSWORD>@ep-steep-water-b45us12d.c-6.us-east-2.aws.neon.tech/across-staging?sslmode=require"
+
+CORS_ORIGIN_ADMIN="http://localhost:5173"
+CORS_ORIGIN_PWA="http://localhost:5174"
 ```
 
-### 4. Ejecutar Migraciones de Base de Datos
-Crea las tablas en tu base de datos PostgreSQL:
+### 4. Sincronizar o Ejecutar Migraciones en Neon
+Para sincronizar las tablas y generar el cliente de Prisma:
 ```bash
-npx prisma migrate dev --name init_across_schema
+npx prisma migrate dev --name <descripcion_en_espanol>
 ```
+*(Para verificar el estado actual de la base de datos en Neon sin crear archivos de migración: `npx prisma db push`).*
 
 ### 5. Levantar el Servidor de Desarrollo
 ```bash

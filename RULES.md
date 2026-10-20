@@ -66,7 +66,14 @@ Toda respuesta HTTP debe utilizar de manera estricta el siguiente contrato JSON:
 
 ---
 
-## 5. Seguridad y Entornos
+## 5. Seguridad y Entornos (Neon Serverless PostgreSQL)
 - **Protección de Credenciales:** NUNCA incluir ni commitear archivos `.env`.
 - **Plantillas Actualizadas:** Cada vez que se incorpore una nueva variable de entorno, debe reflejarse inmediatamente en [.env.example](file:///c:/Users/usuario/Desktop/proyecto%20ACROSS/repos%20across/across-backend/.env.example) con valores de muestra o descriptivos.
-- **Doble Entorno:** Estructurar la lógica pensando en entornos de **Staging** (pruebas) y **Producción** (usar variables como `NODE_ENV`, URLs dinámicas para CORS y base de datos).
+- **Doble Entorno en Neon:**
+  - **Staging (`across-staging`):** Rama de pruebas aislada para desarrollo activo, validación de migraciones y pruebas con datos de muestra.
+  - **Producción (`across-production` / `production`):** Rama productiva oficial.
+  - **Regla de oro de migraciones:** NINGUNA migración se ejecuta en Producción sin haber sido probada y validada exitosamente primero en Staging.
+- **Connection Pooling vs Conexión Directa en Neon:**
+  - `DATABASE_URL`: Utilizar la URL con Connection Pooling (`-pooler.c-6.us-east-2.aws.neon.tech`) para la ejecución regular del servidor Express (evita agotar límites de conexiones concurrentes).
+  - `DIRECT_URL`: Utilizar la URL directa sin pooler para el CLI de Prisma al ejecutar migraciones (`directUrl` en `prisma/schema.prisma`).
+
