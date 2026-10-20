@@ -35,7 +35,7 @@ across-backend/
 │   └── server.ts             # Punto de entrada y levantamiento del servidor Express
 ├── .env.example              # Plantilla de variables de entorno (SIEMPRE commitear)
 ├── .gitignore                # Archivos y carpetas excluidos del control de versiones
-├── .cursorrules              # Reglas de desarrollo estrictas para pair-programming
+├── RULES.md                  # Reglas de desarrollo estrictas para pair-programming
 ├── package.json              # Dependencias y scripts
 ├── prisma.config.ts          # Configuración del CLI de Prisma
 └── tsconfig.json             # Configuración del compilador TypeScript
@@ -121,4 +121,4 @@ Todas las respuestas de los endpoints siguen una estructura homogénea:
 ---
 
 ## 🛡️ Reglas de Desarrollo
-Consulta el archivo [.cursorrules](file:///c:/Users/usuario/Desktop/proyecto%20ACROSS/repos%20across/across-backend/.cursorrules) para conocer las pautas obligatorias de nomenclatura en español, uso de UUIDs en Prisma, TypeScript estricto y retornos tempranos (*early returns*).
+Consulta el archivo [RULES.md](file:///c:/Users/usuario/Desktop/proyecto%20ACROSS/repos%20across/across-backend/RULES.md) para conocer las pautas obligatorias de nomenclatura en español, uso de UUIDs en Prisma, TypeScript estricto y retornos tempranos (*early returns*).
