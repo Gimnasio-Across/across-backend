@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENTIDADES PRINCIPALES
+// ==========================================
+
+model Disciplina {
+  id_disciplina Int                   @id @default(autoincrement())
+  nombre        String                @db.VarChar(100)
+  
+  // Relaciones
+  profesores    Profesor_Disciplina[]
+  grupos        Grupo[]
+}
+
+model Profesor {
+  id_profesor String                @id @default(uuid()) @db.Uuid
+  nombre      String                @db.VarChar(100)
+  
+  // Relaciones
+  disciplinas Profesor_Disciplina[]
+}
+
+// Tabla Intermedia: Muchos Profesores pueden dar Muchas Disciplinas
+model Profesor_Disciplina {
+  id_profesor   String @db.Uuid
+  id_disciplina Int
+
+  profesor   Profesor   @relation(fields: [id_profesor], references: [id_profesor], onDelete: Cascade)
+  disciplina Disciplina @relation(fields: [id_disciplina], references: [id_disciplina], onDelete: Cascade)
+
+  // Llave primaria compuesta
+  @@id([id_profesor, id_disciplina])
+}
+
+model Tutor {
+  id_tutor String  @id @default(uuid()) @db.Uuid
+  nombre   String  @db.VarChar(150)
+  dni      String  @unique @db.VarChar(20)
+  telefono String? @db.VarChar(50)
+  email    String? @unique @db.VarChar(100)
+  
+  // Relaciones (Un tutor puede tener varias alumnas/hermanas)
+  alumnas  Alumna[]
+}
+
+model Alumna {
+  id_alumna           String   @id @default(uuid()) @db.Uuid
+  nombre              String   @db.VarChar(150)
+  fecha_nacimiento    DateTime @db.Date
+  id_tutor            String   @db.Uuid
+  se_retira_sola      Boolean  @default(false)
+  permiso_fotos       Boolean  @default(false)
+  observaciones_salud String?  @db.Text
+  apto_medico         Boolean  @default(false)
+
+  // Relaciones
+  tutor         Tutor                 @relation(fields: [id_tutor], references: [id_tutor], onDelete: Restrict)
+  inscripciones Inscripcion_Grupo[]
+  asistencias   Registro_Asistencia[]
+  cuotas        Cuota_Mensual[]
+}
+
+model Grupo {
+  id_grupo         String  @id @default(uuid()) @db.Uuid
+  nombre           String  @db.VarChar(100)
+  id_disciplina    Int
+  capacidad        Int
+  monto_cuota_base Decimal @db.Decimal(10, 2)
+
+  // Relaciones
+  disciplina      Disciplina          @relation(fields: [id_disciplina], references: [id_disciplina], onDelete: Restrict)
+  inscripciones   Inscripcion_Grupo[]
+  clases_dictadas Clase_Dictada[]
+}
+
+// ==========================================
+// ENTIDADES OPERATIVAS (MVP)
+// ==========================================
+
+// Tabla Intermedia: Una alumna se inscribe a un grupo y se le asigna un número para el "Orden del Día"
+model Inscripcion_Grupo {
+  id_inscripcion   String @id @default(uuid()) @db.Uuid
+  id_alumna        String @db.Uuid
+  id_grupo         String @db.Uuid
+  numero_orden_dia Int
+
+  alumna Alumna @relation(fields: [id_alumna], references: [id_alumna], onDelete: Cascade)
+  grupo  Grupo  @relation(fields: [id_grupo], references: [id_grupo], onDelete: Cascade)
+
+  // Evita que la misma alumna se inscriba dos veces al mismo grupo
+  @@unique([id_alumna, id_grupo])
+}
+
+model Clase_Dictada {
+  id_clase String   @id @default(uuid()) @db.Uuid
+  id_grupo String   @db.Uuid
+  fecha    DateTime @db.Date
+
+  grupo       Grupo                 @relation(fields: [id_grupo], references: [id_grupo], onDelete: Cascade)
+  asistencias Registro_Asistencia[]
+
+  // Evita que se creen dos clases exactamente el mismo día para el mismo grupo
+  @@unique([id_grupo, fecha])
+}
+
+model Registro_Asistencia {
+  id_registro String  @id @default(uuid()) @db.Uuid
+  id_clase    String  @db.Uuid
+  id_alumna   String  @db.Uuid
+  presente    Boolean @default(true) // Por defecto las alumnas están presentes
+
+  clase  Clase_Dictada @relation(fields: [id_clase], references: [id_clase], onDelete: Cascade)
+  alumna Alumna        @relation(fields: [id_alumna], references: [id_alumna], onDelete: Cascade)
+
+  // Evita que se le tome asistencia dos veces a la misma nena en la misma clase
+  @@unique([id_clase, id_alumna])
+}
+
+model Cuota_Mensual {
+  id_cuota    String  @id @default(uuid()) @db.Uuid
+  id_alumna   String  @db.Uuid
+  mes         Int
+  anio        Int
+  monto_total Decimal @db.Decimal(10, 2)
+  estado      String  @default("pendiente") @db.VarChar(20) // 'pendiente', 'pagado', 'vencido'
+
+  alumna Alumna @relation(fields: [id_alumna], references: [id_alumna], onDelete: Cascade)
+
+  // Evita que se le cobren dos cuotas idénticas del mismo mes a la misma nena
+  @@unique([id_alumna, mes, anio])
+}
